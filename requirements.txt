@@ -1,0 +1,5 @@
+mcp
+python-dotenv
+httpx
+openai
+google-generativeai
