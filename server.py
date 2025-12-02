@@ -76,12 +76,20 @@ async def recognize_with_openai_compat(model_name: str, prompt: str, image_input
         base_url=OPENAI_BASE_URL
     )
 
+    # Clean the input: remove newlines and whitespace which cause base64 decode errors
+    cleaned_input = image_input.strip().replace("\n", "").replace("\r", "").replace(" ", "")
+
     # Determine the final image URL format
-    if image_input.startswith(('http://', 'https://', 'data:')):
-        final_image_url = image_input
+    if cleaned_input.startswith(('http://', 'https://')):
+        # It is a URL, use original input (trimmed) but don't strip spaces inside URL just in case (though invalid)
+        # Actually, standard URLs shouldn't have spaces, but let's just use .strip() for URLs
+        final_image_url = image_input.strip() 
+    elif cleaned_input.startswith('data:'):
+        # It is already a data URI
+        final_image_url = cleaned_input
     else:
         # Assume raw base64 if it's not a URL or Data URI. Default to jpeg.
-        final_image_url = f"data:image/jpeg;base64,{image_input}"
+        final_image_url = f"data:image/jpeg;base64,{cleaned_input}"
     
     try:
         response = await client.chat.completions.create(
