@@ -1,7 +1,6 @@
 import os
 import base64
 import httpx
-import asyncio
 from typing import Optional
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
@@ -120,5 +119,8 @@ async def recognize_image(image: str, prompt: str = "Describe this image", model
         # Fallback to OpenAI compatible for qwen, doubao, gpt, etc.
         return await recognize_with_openai_compat(target_model, prompt, mime_type, b64_data)
 
-if __name__ == "__main__":
+def main():
     mcp.run()
+
+if __name__ == "__main__":
+    main()

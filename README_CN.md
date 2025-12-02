@@ -5,30 +5,100 @@
 ## 功能特性
 - **图像识别**: 描述图像内容或回答关于图像的问题。
 - **多模型支持**: 支持动态切换模型，包括 Gemini (推荐), GPT-4o, Qwen-VL (通义千问), Doubao (豆包) 等。
-- **灵活输入**: 支持 HTTP/HTTPS 图片链接或 Base64 编码的图片数据。
+- **灵活性**: 支持 `uv` 包管理器，支持 Windows/Linux/macOS 跨平台部署。
 
-## 安装步骤
+## 安装与使用
 
-1. **克隆仓库:**
+你可以使用标准的 Python 工具 (pip) 或者现代化的 `uv` 包管理器来运行此服务器。
+
+### 前置要求
+- Python 3.10 或更高版本
+- 您选择的模型提供商的 API Key (Google Gemini, OpenAI, 阿里云 DashScope 等)
+
+---
+
+### 方法 1: 使用 `uv` (推荐)
+
+[uv](https://github.com/astral-sh/uv) 是一个极速的 Python 包管理器。
+
+#### 1. 直接使用 `uv run` 运行
+你不需要手动创建虚拟环境，`uv` 会自动处理。
+
+```bash
+# 克隆仓库
+git clone https://github.com/glasses666/mcp-image-recognition-py.git
+cd mcp-image-recognition-py
+
+# 创建配置文件
+cp .env.example .env
+# 编辑 .env 文件填入你的 API Key
+
+# 运行服务器
+uv run server.py
+```
+
+#### 2. 使用 `uvx` (临时运行)
+如果你不想克隆代码仓库，可以直接通过 `uvx` 运行 (支持 git 来源):
+
+```bash
+# 注意: 你仍然需要提供环境变量。
+# 建议使用上面的 'uv run' 方法以便通过 .env 文件持久化配置。
+uvx --from git+https://github.com/glasses666/mcp-image-recognition-py mcp-image-recognition
+```
+
+---
+
+### 方法 2: 标准 Python (pip)
+
+#### Linux / macOS
+
+1. **克隆并设置:**
    ```bash
    git clone https://github.com/glasses666/mcp-image-recognition-py.git
    cd mcp-image-recognition-py
-   ```
-
-2. **创建虚拟环境 (推荐):**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Windows 用户使用: venv\Scripts\activate
-   ```
-
-3. **安装依赖:**
-   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
    pip install -r requirements.txt
    ```
 
+2. **配置:**
+   ```bash
+   cp .env.example .env
+   # 编辑 .env 文件填入你的 API Key
+   ```
+
+3. **运行:**
+   ```bash
+   python server.py
+   ```
+
+#### Windows
+
+1. **克隆并设置:**
+   ```powershell
+   git clone https://github.com/glasses666/mcp-image-recognition-py.git
+   cd mcp-image-recognition-py
+   python -m venv venv
+   .\venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **配置:**
+   ```powershell
+   copy .env.example .env
+   # 编辑 .env 文件填入你的 API Key
+   ```
+
+3. **运行:**
+   ```powershell
+   python server.py
+   ```
+
+---
+
 ## 配置说明
 
-在项目根目录下创建一个 `.env` 文件（可以参考 `.env.example`）：
+在项目根目录下创建一个 `.env` 文件（参考 `.env.example`）：
 
 ### 1. 使用 Google Gemini (推荐，速度快且成本低)
 从 [Google AI Studio](https://aistudio.google.com/) 获取 API Key。
@@ -53,22 +123,50 @@ OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
 DEFAULT_MODEL=doubao-pro-32k
 ```
 
+---
+
 ## Agent AI 配置 (如 Claude Desktop)
 
-要将此服务器用于 MCP 客户端（例如 Claude Desktop），请将其添加到您的配置文件中（例如 `claude_desktop_config.json`）：
+要将此服务器用于 MCP 客户端（例如 Claude Desktop），请将其添加到您的配置文件中（例如 `claude_desktop_config.json`）。
 
 ### 配置文件位置
-- **MacOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-### 配置 JSON 示例:
-**重要:** 请确保使用虚拟环境中 Python 可执行文件 (`python` 或 `python.exe`) 的**绝对路径**，以及 `server.py` 脚本的**绝对路径**。
+### 配置 JSON 示例
+
+**方案 A: 使用 `uv` (最简单)**
+如果你安装了 `uv`，可以让它自动管理环境。
 
 ```json
 {
   "mcpServers": {
     "image-recognition": {
-      "command": "/absolute/path/to/venv/bin/python",
+      "command": "/path/to/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/absolute/path/to/mcp-image-recognition-py",
+        "server.py"
+      ],
+      "env": {
+        "GEMINI_API_KEY": "your_key_here",
+        "DEFAULT_MODEL": "gemini-1.5-flash"
+      }
+    }
+  }
+}
+```
+
+**方案 B: 标准 Python Venv**
+确保使用虚拟环境中 Python 可执行文件的**绝对路径**。
+
+```json
+{
+  "mcpServers": {
+    "image-recognition": {
+      "command": "/absolute/path/to/mcp-image-recognition-py/venv/bin/python", 
       "args": [
         "/absolute/path/to/mcp-image-recognition-py/server.py"
       ],
@@ -80,11 +178,11 @@ DEFAULT_MODEL=doubao-pro-32k
   }
 }
 ```
-*注意: 你也可以直接在 JSON 的 `env` 部分配置环境变量，这样就不依赖 `.env` 文件了。*
+*Windows 注意:* 路径中的反斜杠需要转义，例如 `C:\Users\Name\...`。
 
-## 使用说明
+---
 
-连接成功后，服务器将提供以下工具：
+## 使用工具
 
 ### `recognize_image`
 分析图像并返回文本描述。
@@ -94,7 +192,7 @@ DEFAULT_MODEL=doubao-pro-32k
     - HTTP/HTTPS URL (例如 `https://example.com/cat.jpg`)
     - Base64 编码字符串 (带或不带 `data:image/...;base64,` 前缀均可)
 - `prompt` (string, 选填): 具体的指令或问题。默认值: "Describe this image" (描述这张图片)。
-- `model` (string, 选填): 针对本次请求指定使用的模型 (例如 `gemini-1.5-pro` 用于更复杂的推理)。如果不填则使用环境变量中的 `DEFAULT_MODEL`。
+- `model` (string, 选填): 针对本次请求指定使用的模型。
 
 ## 许可证
 MIT
