@@ -11,7 +11,7 @@ An MCP server implementation in Python providing image recognition capabilities 
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/glasses666/mcp-image-recognition-py.git
    cd mcp-image-recognition-py
    ```
 
