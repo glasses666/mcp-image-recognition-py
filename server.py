@@ -44,6 +44,12 @@ async def get_processed_image_data(image_input: str) -> tuple[str, str]:
         # Assume raw base64
         # Remove whitespaces which might be present in raw strings
         cleaned_b64 = image_input.replace(" ", "")
+        
+        # Add padding if necessary to avoid "Incorrect padding" errors
+        missing_padding = len(cleaned_b64) % 4
+        if missing_padding:
+            cleaned_b64 += '=' * (4 - missing_padding)
+            
         image_bytes = base64.b64decode(cleaned_b64)
     
     # Process using the new utility
