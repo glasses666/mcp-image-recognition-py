@@ -67,7 +67,7 @@ async def recognize_with_gemini(model_name: str, prompt: str, mime_type: str, b6
     except Exception as e:
         return f"Gemini API Error: {str(e)}"
 
-async def recognize_with_openai_compat(model_name: str, prompt: str, mime_type: str, b64_data: str) -> str:
+async def recognize_with_openai_compat(model_name: str, prompt: str, image_input: str) -> str:
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY is not set")
         
@@ -75,6 +75,13 @@ async def recognize_with_openai_compat(model_name: str, prompt: str, mime_type: 
         api_key=OPENAI_API_KEY,
         base_url=OPENAI_BASE_URL
     )
+
+    # Determine the final image URL format
+    if image_input.startswith(('http://', 'https://', 'data:')):
+        final_image_url = image_input
+    else:
+        # Assume raw base64 if it's not a URL or Data URI. Default to jpeg.
+        final_image_url = f"data:image/jpeg;base64,{image_input}"
     
     try:
         response = await client.chat.completions.create(
@@ -87,7 +94,7 @@ async def recognize_with_openai_compat(model_name: str, prompt: str, mime_type: 
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:{mime_type};base64,{b64_data}"
+                                "url": final_image_url
                             }
                         }
                     ]
@@ -110,14 +117,17 @@ async def recognize_image(image: str, prompt: str = "Describe this image", model
         model: Optional model name (e.g., 'gemini-1.5-flash', 'qwen-vl-max'). If not provided, uses DEFAULT_MODEL env var.
     """
     target_model = model or DEFAULT_MODEL
-    mime_type, b64_data = await get_image_data(image)
     
     # Routing logic
     if "gemini" in target_model.lower():
+        # Gemini usually requires the image data to be uploaded or passed as inline data (bytes)
+        # It does not natively support fetching public URLs in the same way OpenAI's API does for 'image_url'
+        mime_type, b64_data = await get_image_data(image)
         return await recognize_with_gemini(target_model, prompt, mime_type, b64_data)
     else:
         # Fallback to OpenAI compatible for qwen, doubao, gpt, etc.
-        return await recognize_with_openai_compat(target_model, prompt, mime_type, b64_data)
+        # These providers often support URLs directly, or data URIs.
+        return await recognize_with_openai_compat(target_model, prompt, image)
 
 def main():
     mcp.run()
