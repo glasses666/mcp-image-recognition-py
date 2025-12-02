@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from image_processing import process_image_data
 
 # Load environment variables
 load_dotenv()
@@ -20,25 +21,34 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-1.5-flash")
 # Initialize MCP Server
 mcp = FastMCP("image-recognition")
 
-async def get_image_data(image_input: str) -> tuple[str, str]:
+async def get_processed_image_data(image_input: str) -> tuple[str, str]:
     """
-    Process image input (URL or Base64) and return (mime_type, base64_data).
+    Process image input (URL or Base64), resize/compress it, and return (mime_type, base64_data).
+    Always returns image/jpeg.
     """
+    image_bytes = b""
+    
+    # Clean input
+    image_input = image_input.strip().replace("\n", "").replace("\r", "")
+
     if image_input.startswith(('http://', 'https://')):
         async with httpx.AsyncClient() as client:
             response = await client.get(image_input)
             response.raise_for_status()
-            mime_type = response.headers.get('content-type', 'image/jpeg')
-            data = base64.b64encode(response.content).decode('utf-8')
-            return mime_type, data
+            image_bytes = response.content
+    elif image_input.startswith('data:'):
+        # Extract base64 part
+        _, data = image_input.split(',', 1)
+        image_bytes = base64.b64decode(data)
+    else:
+        # Assume raw base64
+        # Remove whitespaces which might be present in raw strings
+        cleaned_b64 = image_input.replace(" ", "")
+        image_bytes = base64.b64decode(cleaned_b64)
     
-    if image_input.startswith('data:'):
-        header, data = image_input.split(',', 1)
-        mime_type = header.split(';')[0].split(':')[1]
-        return mime_type, data
-        
-    # Assume raw base64, default to jpeg
-    return 'image/jpeg', image_input
+    # Process using the new utility
+    processed_b64 = process_image_data(image_bytes)
+    return "image/jpeg", processed_b64
 
 async def recognize_with_gemini(model_name: str, prompt: str, mime_type: str, b64_data: str) -> str:
     if not GEMINI_API_KEY:
@@ -67,7 +77,7 @@ async def recognize_with_gemini(model_name: str, prompt: str, mime_type: str, b6
     except Exception as e:
         return f"Gemini API Error: {str(e)}"
 
-async def recognize_with_openai_compat(model_name: str, prompt: str, image_input: str) -> str:
+async def recognize_with_openai_compat(model_name: str, prompt: str, mime_type: str, b64_data: str) -> str:
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY is not set")
         
@@ -76,20 +86,8 @@ async def recognize_with_openai_compat(model_name: str, prompt: str, image_input
         base_url=OPENAI_BASE_URL
     )
 
-    # Clean the input: remove newlines and whitespace which cause base64 decode errors
-    cleaned_input = image_input.strip().replace("\n", "").replace("\r", "").replace(" ", "")
-
-    # Determine the final image URL format
-    if cleaned_input.startswith(('http://', 'https://')):
-        # It is a URL, use original input (trimmed) but don't strip spaces inside URL just in case (though invalid)
-        # Actually, standard URLs shouldn't have spaces, but let's just use .strip() for URLs
-        final_image_url = image_input.strip() 
-    elif cleaned_input.startswith('data:'):
-        # It is already a data URI
-        final_image_url = cleaned_input
-    else:
-        # Assume raw base64 if it's not a URL or Data URI. Default to jpeg.
-        final_image_url = f"data:image/jpeg;base64,{cleaned_input}"
+    # Construct clean data URI
+    final_image_url = f"data:{mime_type};base64,{b64_data}"
     
     try:
         response = await client.chat.completions.create(
@@ -126,16 +124,19 @@ async def recognize_image(image: str, prompt: str = "Describe this image", model
     """
     target_model = model or DEFAULT_MODEL
     
+    # Always process image first (resize, compress, standardize to JPEG base64)
+    # This fixes 400 errors from strict APIs and reduces token usage.
+    try:
+        mime_type, b64_data = await get_processed_image_data(image)
+    except Exception as e:
+        return f"Error processing image: {str(e)}"
+    
     # Routing logic
     if "gemini" in target_model.lower():
-        # Gemini usually requires the image data to be uploaded or passed as inline data (bytes)
-        # It does not natively support fetching public URLs in the same way OpenAI's API does for 'image_url'
-        mime_type, b64_data = await get_image_data(image)
         return await recognize_with_gemini(target_model, prompt, mime_type, b64_data)
     else:
         # Fallback to OpenAI compatible for qwen, doubao, gpt, etc.
-        # These providers often support URLs directly, or data URIs.
-        return await recognize_with_openai_compat(target_model, prompt, image)
+        return await recognize_with_openai_compat(target_model, prompt, mime_type, b64_data)
 
 def main():
     mcp.run()
