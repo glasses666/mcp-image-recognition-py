@@ -7,9 +7,28 @@ An MCP server implementation in Python providing image recognition capabilities 
 - **Multi-Model Support**: Dynamically switch between Gemini, GPT-4o, Qwen-VL, Doubao, etc.
 - **Flexible**: Accepts image URLs or Base64 data.
 
-## Installation & Usage
+## Quick Setup (Recommended)
 
-You can run this server using standard Python tools or the modern `uv` package manager.
+We provide automated scripts to set up the environment and dependencies in one click.
+
+### Linux / macOS
+```bash
+git clone https://github.com/glasses666/mcp-image-recognition-py.git
+cd mcp-image-recognition-py
+./setup.sh
+```
+
+### Windows
+1. Clone or download this repository.
+2. Double-click `setup.bat`.
+
+After the script finishes, simply edit the `.env` file with your API keys.
+
+---
+
+## Installation & Usage (Manual)
+
+If you prefer manual installation or want to use `uv`:
 
 ### Prerequisites
 - Python 3.10 or higher

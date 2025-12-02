@@ -8,15 +8,28 @@
 - **智能图像处理**: 自动对输入图片进行解码、大小调整 (最大 600x600)、压缩 (JPEG 格式，质量 50) 和标准化 Base64 编码，以优化性能并避免 API 错误。
 - **灵活性**: 支持 `uv` 包管理器，支持 Windows/Linux/macOS 跨平台部署。
 
-## 安装与使用
+## 快速部署 (推荐)
 
-你可以使用标准的 Python 工具 (pip) 或者现代化的 `uv` 包管理器来运行此服务器。
+我们提供了自动化脚本，帮助您一键完成环境配置和依赖安装。
 
-### 前置要求
-- Python 3.10 或更高版本
-- 您选择的模型提供商的 API Key (Google Gemini, OpenAI, 阿里云 DashScope 等)
+### Linux / macOS
+```bash
+git clone https://github.com/glasses666/mcp-image-recognition-py.git
+cd mcp-image-recognition-py
+./setup.sh
+```
+
+### Windows
+1. 克隆或下载本仓库。
+2. 双击运行 `setup.bat` 脚本。
+
+脚本运行结束后，请编辑 `.env` 文件填入您的 API Key 即可使用。
 
 ---
+
+## 安装与使用 (手动)
+
+如果您更喜欢手动安装或使用 `uv` 包管理器：
 
 ### 方法 1: 使用 `uv` (推荐)
 
