@@ -151,7 +151,9 @@ If you have `uv` installed, you can let it handle the environment.
         "server.py"
       ],
       "env": {
-        "GEMINI_API_KEY": "your_key_here",
+        "GEMINI_API_KEY": "your_gemini_key_here",
+        "OPENAI_API_KEY": "your_openai_key_here",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
         "DEFAULT_MODEL": "gemini-1.5-flash"
       }
     }
@@ -171,7 +173,9 @@ Ensure you provide the **absolute path** to the python executable in your virtua
         "/absolute/path/to/mcp-image-recognition-py/server.py"
       ],
       "env": {
-        "GEMINI_API_KEY": "your_key_here",
+        "GEMINI_API_KEY": "your_gemini_key_here",
+        "OPENAI_API_KEY": "your_openai_key_here",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
         "DEFAULT_MODEL": "gemini-1.5-flash"
       }
     }

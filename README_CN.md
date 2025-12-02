@@ -151,7 +151,9 @@ DEFAULT_MODEL=doubao-pro-32k
         "server.py"
       ],
       "env": {
-        "GEMINI_API_KEY": "your_key_here",
+        "GEMINI_API_KEY": "your_gemini_key_here",
+        "OPENAI_API_KEY": "your_openai_key_here",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
         "DEFAULT_MODEL": "gemini-1.5-flash"
       }
     }
@@ -171,7 +173,9 @@ DEFAULT_MODEL=doubao-pro-32k
         "/absolute/path/to/mcp-image-recognition-py/server.py"
       ],
       "env": {
-        "GEMINI_API_KEY": "your_key_here",
+        "GEMINI_API_KEY": "your_gemini_key_here",
+        "OPENAI_API_KEY": "your_openai_key_here",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
         "DEFAULT_MODEL": "gemini-1.5-flash"
       }
     }
