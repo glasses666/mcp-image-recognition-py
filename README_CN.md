@@ -103,7 +103,11 @@ uvx --from git+https://github.com/glasses666/mcp-image-recognition-py mcp-image-
 ### 1. 使用 Google Gemini (推荐，速度快且成本低)
 从 [Google AI Studio](https://aistudio.google.com/) 获取 API Key。
 ```env
-GEMINI_API_KEY=your_google_api_key
+# GEMINI_API_KEY=your_google_api_key
+# ^ 解除此行注释，并将 'your_google_api_key' 替换为您的实际 Gemini API Key。
+#    要配置自定义 Gemini API 服务器，通常在客户端或直接在 'gemini' provider 的初始化中设置
+#    (如果它支持)。但是，对于 `google-generativeai` 库，API 端点通常是隐式的，
+#    或者通过客户端选项进行配置，而不是直接通过像 BASE_URL 这样的环境变量。
 DEFAULT_MODEL=gemini-1.5-flash
 ```
 
