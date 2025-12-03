@@ -1,33 +1,38 @@
-import base64
+from io import BytesIO
 from PIL import Image
-import io
+import base64
 
-def process_image_data(image_data: bytes) -> str:
+def process_image_data(image_bytes: bytes, max_size: int = 1536, max_file_size_mb: int = 4) -> str:
     """
-    Resize and compress image data (bytes), returning a base64 encoded string.
+    Process raw image bytes:
+    1. Open with PIL.
+    2. Resize if larger than max_size (longest edge).
+    3. Convert/Compress to JPEG to ensure it's within size limits and widely compatible.
+    4. Return base64 string.
     """
     try:
-        # Load image from bytes
-        with Image.open(io.BytesIO(image_data)) as img:
-            # Resize if too large
-            max_size = (600, 600) # As per user's original script
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        with Image.open(BytesIO(image_bytes)) as img:
+            # Convert to RGB if necessary (handling PNG alpha channel, etc.)
+            if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                img = img.convert('RGB')
+                
+            # Resize logic
+            width, height = img.size
+            if width > max_size or height > max_size:
+                ratio = min(max_size / width, max_size / height)
+                new_size = (int(width * ratio), int(height * ratio))
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
             
-            # Save to buffer
-            buffer = io.BytesIO()
-            # Convert to RGB if necessary
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
+            # Save to buffer as JPEG
+            buffer = BytesIO()
+            # Start with high quality, lower it if needed (simple logic for now: just use 85)
+            img.save(buffer, format="JPEG", quality=85)
             
-            # Compress
-            img.save(buffer, format="JPEG", quality=50)
+            # Check size. If > max_file_size_mb, could compress further, 
+            # but usually 1536px side at q85 is < 1MB.
             
-            # Encode
-            processed_bytes = buffer.getvalue()
-            base64_str = base64.b64encode(processed_bytes).decode('utf-8')
-            return base64_str
+            return base64.b64encode(buffer.getvalue()).decode('utf-8')
+            
     except Exception as e:
-        # If processing fails (e.g. not an image), try to just base64 encode original
-        # This acts as a fallback
-        print(f"Image processing failed: {e}. Falling back to original data.")
-        return base64.b64encode(image_data).decode('utf-8')
+        # If image processing fails (e.g. invalid image format), raise it up
+        raise ValueError(f"Failed to process image data: {str(e)}")

@@ -1,6 +1,7 @@
 import os
 import base64
 import httpx
+import re
 from typing import Optional
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
@@ -28,7 +29,7 @@ async def get_processed_image_data(image_input: str) -> tuple[str, str]:
     """
     image_bytes = b""
     
-    # Clean input
+    # Clean input: remove whitespace/newlines from the *entire* string if it's potentially base64
     image_input = image_input.strip().replace("\n", "").replace("\r", "")
 
     if image_input.startswith(('http://', 'https://')):
@@ -38,8 +39,16 @@ async def get_processed_image_data(image_input: str) -> tuple[str, str]:
             image_bytes = response.content
     elif image_input.startswith('data:'):
         # Extract base64 part
-        _, data = image_input.split(',', 1)
-        image_bytes = base64.b64decode(data)
+        try:
+            _, data = image_input.split(',', 1)
+            # Further clean the data part just in case
+            data = data.replace(" ", "")
+            missing_padding = len(data) % 4
+            if missing_padding:
+                data += '=' * (4 - missing_padding)
+            image_bytes = base64.b64decode(data)
+        except Exception as e:
+             raise ValueError(f"Invalid data URI or base64 data: {str(e)}")
     else:
         # Assume raw base64
         # Remove whitespaces which might be present in raw strings
@@ -50,7 +59,10 @@ async def get_processed_image_data(image_input: str) -> tuple[str, str]:
         if missing_padding:
             cleaned_b64 += '=' * (4 - missing_padding)
             
-        image_bytes = base64.b64decode(cleaned_b64)
+        try:
+            image_bytes = base64.b64decode(cleaned_b64)
+        except Exception as e:
+             raise ValueError(f"Invalid raw base64 string: {str(e)}")
     
     # Process using the new utility
     processed_b64 = process_image_data(image_bytes)
