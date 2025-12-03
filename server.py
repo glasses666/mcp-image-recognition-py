@@ -24,45 +24,57 @@ mcp = FastMCP("image-recognition")
 
 async def get_processed_image_data(image_input: str) -> tuple[str, str]:
     """
-    Process image input (URL or Base64), resize/compress it, and return (mime_type, base64_data).
+    Process image input (URL, local file path, or Base64), resize/compress it, and return (mime_type, base64_data).
     Always returns image/jpeg.
     """
     image_bytes = b""
     
-    # Clean input: remove whitespace/newlines from the *entire* string if it's potentially base64
-    image_input = image_input.strip().replace("\n", "").replace("\r", "")
-
-    if image_input.startswith(('http://', 'https://')):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(image_input)
-            response.raise_for_status()
-            image_bytes = response.content
-    elif image_input.startswith('data:'):
-        # Extract base64 part
+    # Check if input is a local file path
+    # We check this first because a file path might contain characters that look like base64 but valid path chars
+    if os.path.exists(image_input) and os.path.isfile(image_input):
         try:
-            _, data = image_input.split(',', 1)
-            # Further clean the data part just in case
-            data = data.replace(" ", "")
-            missing_padding = len(data) % 4
-            if missing_padding:
-                data += '=' * (4 - missing_padding)
-            image_bytes = base64.b64decode(data)
+            with open(image_input, "rb") as f:
+                image_bytes = f.read()
         except Exception as e:
-             raise ValueError(f"Invalid data URI or base64 data: {str(e)}")
-    else:
-        # Assume raw base64
-        # Remove whitespaces which might be present in raw strings
-        cleaned_b64 = image_input.replace(" ", "")
-        
-        # Add padding if necessary to avoid "Incorrect padding" errors
-        missing_padding = len(cleaned_b64) % 4
-        if missing_padding:
-            cleaned_b64 += '=' * (4 - missing_padding)
+            raise ValueError(f"Failed to read local file '{image_input}': {str(e)}")
             
-        try:
-            image_bytes = base64.b64decode(cleaned_b64)
-        except Exception as e:
-             raise ValueError(f"Invalid raw base64 string: {str(e)}")
+    else:
+        # Not a local file, treat as URL or Base64
+        
+        # Clean input: remove whitespace/newlines from the *entire* string if it's potentially base64
+        image_input = image_input.strip().replace("\n", "").replace("\r", "")
+
+        if image_input.startswith(('http://', 'https://')):
+            async with httpx.AsyncClient() as client:
+                response = await client.get(image_input)
+                response.raise_for_status()
+                image_bytes = response.content
+        elif image_input.startswith('data:'):
+            # Extract base64 part
+            try:
+                _, data = image_input.split(',', 1)
+                # Further clean the data part just in case
+                data = data.replace(" ", "")
+                missing_padding = len(data) % 4
+                if missing_padding:
+                    data += '=' * (4 - missing_padding)
+                image_bytes = base64.b64decode(data)
+            except Exception as e:
+                 raise ValueError(f"Invalid data URI or base64 data: {str(e)}")
+        else:
+            # Assume raw base64
+            # Remove whitespaces which might be present in raw strings
+            cleaned_b64 = image_input.replace(" ", "")
+            
+            # Add padding if necessary to avoid "Incorrect padding" errors
+            missing_padding = len(cleaned_b64) % 4
+            if missing_padding:
+                cleaned_b64 += '=' * (4 - missing_padding)
+                
+            try:
+                image_bytes = base64.b64decode(cleaned_b64)
+            except Exception as e:
+                 raise ValueError(f"Invalid input. It is not a valid local file path, URL, or Base64 string. Details: {str(e)}")
     
     # Process using the new utility
     processed_b64 = process_image_data(image_bytes)
@@ -136,7 +148,7 @@ async def recognize_image(image: str, prompt: str = "Describe this image", model
     Recognize and describe the content of an image using AI models.
     
     Args:
-        image: The image to analyze. Can be a URL (http/https) or a Base64 encoded string.
+        image: The image to analyze. Can be a URL (http/https), a local file path (e.g., /path/to/image.jpg), or a Base64 encoded string.
         prompt: Optional instruction or question about the image. Default is 'Describe this image'.
         model: Optional model name (e.g., 'gemini-1.5-flash', 'qwen-vl-max'). If not provided, uses DEFAULT_MODEL env var.
     """
